@@ -23,7 +23,7 @@ class KPI:
     trend: tuple[int, ...]
 
 
-@st.cache_data
+@st.cache_resource
 def load_dashboard_data(user_id: str = "demo-merchant") -> dict:
     """Demo adapter. Replace this body with an authenticated API call later."""
     months = [calendar.month_abbr[i] for i in range(1, 13)]
