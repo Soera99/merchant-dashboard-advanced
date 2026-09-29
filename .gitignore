@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.py[cod]
+.streamlit/secrets.toml
+workbook_inspection/
+node_modules/
