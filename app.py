@@ -171,7 +171,6 @@ def inject_css() -> None:
       .tl-date { font-size:.66rem; color:#98a2b3; margin-top:.05rem; }
       .st-key-geo_card { background:#fff; border:1px solid var(--line); border-radius:16px; box-shadow:0 5px 18px rgba(39,57,86,.03); padding:1.05rem 1.15rem 2rem; }
       .st-key-geo_card div[data-testid="stPlotlyChart"] { background:#f1f4fd; border:1px solid #e6ebf7; border-radius:12px; box-shadow:none; }
-      .st-key-map_metric { display:flex; justify-content:flex-end; }
       .map-foot { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-top:.2rem; color:#7d8999; font-size:.7rem; }
       .map-legend { display:flex; align-items:center; gap:.5rem; }
       .legend-bar { width:140px; height:8px; border-radius:99px; }
@@ -181,12 +180,21 @@ def inject_css() -> None:
       .fb-hint { color:#98a2b3; font-size:.8rem; margin-left:.9rem; }
       [class*="st-key-fbox_"] button { border-radius:99px; font-size:.78rem; padding:.3rem 1.15rem; min-height:0; white-space:nowrap; }
       [class*="st-key-fbox_"] button p { font-size:.78rem; }
-      [class*="st-key-fbox_"] button[kind="secondary"], [class*="st-key-fbox_"] button[data-testid="stBaseButton-secondary"] { background:#fff; color:#182230; border:1px solid #182230; }
-      [class*="st-key-fb_add_"], [class*="st-key-fb_clear_"] { display:flex; justify-content:flex-end; }
-      [class*="st-key-fb_pills_"] { display:flex !important; flex-direction:row !important; flex-wrap:wrap !important; gap:.45rem !important; align-items:center; }
-      [class*="st-key-fb_pills_"] > div { width:auto !important; }
-      [class*="st-key-fb_rm_"] button, [class*="st-key-fb_rm_"] button[kind="secondary"], [class*="st-key-fb_rm_"] button[data-testid="stBaseButton-secondary"] { background:#eef0f4; color:#667085; border:none; padding:.32rem .95rem; }
-      [class*="st-key-fb_rm_"] button strong { color:#182230; font-weight:600; }
+      [class*="st-key-fbox_"] button[kind="secondary"], [class*="st-key-fbox_"] button[data-testid="stBaseButton-secondary"] { background:#fff; color:#182230; border:1px solid rgb(0,0,0); }
+      [class*="st-key-fbox_"] button[kind="secondary"]:hover, [class*="st-key-fbox_"] button[kind="secondary"]:focus, [class*="st-key-fbox_"] button[kind="secondary"]:active, [class*="st-key-fbox_"] button[data-testid="stBaseButton-secondary"]:hover, [class*="st-key-fbox_"] button[data-testid="stBaseButton-secondary"]:focus, [class*="st-key-fbox_"] button[data-testid="stBaseButton-secondary"]:active { border-color:rgb(0,0,0); color:#000; background:#f3f4f7; }
+      [class*="st-key-fbox_"] [data-testid="stWidgetLabel"] p, [class*="st-key-fbox_"] label p { font-weight:600; }
+      [class*="st-key-fb_right_"] { align-items:flex-end; }
+      [class*="st-key-fb_actions_"] { display:flex !important; flex-direction:row !important; flex-wrap:nowrap !important; justify-content:flex-start; align-items:center; gap:1rem !important; }
+      [class*="st-key-fb_actions_"] > div { width:auto !important; }
+      .fb-pills { display:flex; flex-wrap:wrap; gap:.45rem; align-items:center; }
+      .fb-pill { background:#eef0f4; color:#667085; border-radius:99px; padding:.32rem .95rem; font-size:.78rem; white-space:nowrap; }
+      .fb-pill b { color:#182230; font-weight:600; }
+      .st-key-geo_toggle { align-items:flex-end; }
+      .st-key-geo_toggle [data-testid="stButtonGroup"], .st-key-geo_toggle [role="radiogroup"] { background:#f1f3f7; border-radius:10px; padding:.2rem; gap:.2rem; }
+      .st-key-geo_toggle button { border:none !important; border-radius:8px !important; background:transparent; color:#667085; font-size:.72rem; padding:.35rem .85rem; min-height:0; box-shadow:none; }
+      .st-key-geo_toggle button p { font-size:.72rem; }
+      .st-key-geo_toggle button[data-testid$="Active"], .st-key-geo_toggle button[aria-pressed="true"], .st-key-geo_toggle button[aria-checked="true"] { background:#5577d4 !important; color:#fff !important; }
+      .st-key-geo_toggle button[data-testid$="Active"] p, .st-key-geo_toggle button[aria-pressed="true"] p, .st-key-geo_toggle button[aria-checked="true"] p { color:#fff; }
       [class*="st-key-fbox_"] [data-baseweb="select"] > div { background:#f3f4f7; border:none; border-radius:10px; }
       .kpi-card.compact { padding:.85rem .8rem .75rem; }
       .kpi-card.compact .kpi-value { font-size:1.15rem; }
@@ -341,10 +349,11 @@ def geo_card(frame: pd.DataFrame) -> None:
         with head_left:
             st.markdown(f'<div class="card-title">Geographic Distribution by {metric}</div><div class="card-sub">Color by: <b>{metric}</b></div>', unsafe_allow_html=True)
         with head_right:
-            if hasattr(st, "segmented_control"):
-                st.segmented_control("Map metric", options, default="Revenue", key="map_metric", label_visibility="collapsed")
-            else:
-                st.radio("Map metric", options, horizontal=True, key="map_metric", label_visibility="collapsed")
+            with st.container(key="geo_toggle"):
+                if hasattr(st, "segmented_control"):
+                    st.segmented_control("Map metric", options, default="Revenue", key="map_metric", label_visibility="collapsed")
+                else:
+                    st.radio("Map metric", options, horizontal=True, key="map_metric", label_visibility="collapsed")
         st.plotly_chart(map_chart(frame, metric), width="stretch", config={"displayModeBar": False, "scrollZoom": False})
         leader = frame.sort_values(field, ascending=False).iloc[0]["province"]
         st.markdown(
@@ -388,10 +397,6 @@ def cancel_filters() -> None:
     st.session_state["filter_editing_tab"] = None
 
 
-def remove_filter(name: str) -> None:
-    st.session_state.get("applied_filters", {}).pop(name, None)
-
-
 def clear_filters() -> None:
     st.session_state["applied_filters"] = {}
 
@@ -412,35 +417,35 @@ def filter_bar(tab: str) -> None:
     with st.container(key=f"fbox_{tab}"):
         if editing:
             left, right = st.columns([6, 1.3], vertical_alignment="center")
-            left.markdown(f'{title}<span class="fb-hint">No filters applied - showing all data</span>' if not applied else f'{title}<span class="fb-hint">Choose filters, then click Apply Filter</span>', unsafe_allow_html=True)
+            hint = "Choose filters, then click Apply Filter" if applied else "No filters applied - showing all data"
+            left.markdown(f'{title}<span class="fb-hint">{hint}</span>', unsafe_allow_html=True)
             with right:
-                st.button("Add Filter", key=f"fb_add_{tab}", type="primary", disabled=True)
+                with st.container(key=f"fb_right_{tab}"):
+                    st.button("Add Filter", key=f"fb_add_{tab}", type="primary", disabled=True)
             names = list(FILTERS)
             for start in range(0, len(names), 4):
                 columns = st.columns(4, gap="medium")
                 for column, name in zip(columns, names[start:start + 4]):
                     with column:
                         st.selectbox(name, FILTERS[name], key=f"{tab}_draft_{name}")
-            apply_col, cancel_col, _ = st.columns([1.2, 1, 6], gap="small")
-            with apply_col:
+            with h_container(f"fb_actions_{tab}"):
                 st.button("Apply Filter", key=f"fb_apply_{tab}", type="primary", on_click=apply_filters, args=(tab,))
-            with cancel_col:
                 st.button("Cancel", key=f"fb_cancel_{tab}", on_click=cancel_filters)
         elif applied:
             title_col, pills_col, action_col = st.columns([1, 6.3, 1.9], vertical_alignment="center")
             title_col.markdown(title, unsafe_allow_html=True)
-            with pills_col:
-                with h_container(f"fb_pills_{tab}"):
-                    for i, (name, value) in enumerate(applied.items()):
-                        st.button(f"{name}: **{value}**  :red[✕]", key=f"fb_rm_{tab}_{i}", on_click=remove_filter, args=(name,))
+            pills = "".join(f'<span class="fb-pill">{escape(name)}: <b>{escape(value)}</b></span>' for name, value in applied.items())
+            pills_col.markdown(f'<div class="fb-pills">{pills}</div>', unsafe_allow_html=True)
             with action_col:
-                st.button("Add Filter", key=f"fb_add_{tab}", type="primary", on_click=open_filter_editor, args=(tab,))
-                st.button("Clear All Filter", key=f"fb_clear_{tab}", on_click=clear_filters)
+                with st.container(key=f"fb_right_{tab}"):
+                    st.button("Add Filter", key=f"fb_add_{tab}", type="primary", on_click=open_filter_editor, args=(tab,))
+                    st.button("Clear All Filter", key=f"fb_clear_{tab}", on_click=clear_filters)
         else:
             left, right = st.columns([6, 1.3], vertical_alignment="center")
             left.markdown(f'{title}<span class="fb-hint">No filters applied - showing all data</span>', unsafe_allow_html=True)
             with right:
-                st.button("Add Filter", key=f"fb_add_{tab}", type="primary", on_click=open_filter_editor, args=(tab,))
+                with st.container(key=f"fb_right_{tab}"):
+                    st.button("Add Filter", key=f"fb_add_{tab}", type="primary", on_click=open_filter_editor, args=(tab,))
 
 
 def executive_overview(data: dict) -> None:
@@ -734,6 +739,7 @@ def consumer_overview(data: dict, months: list[str]) -> None:
     with cols[0]: mk(head("Gender Distribution", "Consumer breakdown") + f'<div style="margin-top:.6rem">{stat_rows(data["gender"])}</div>', 215)
     with cols[1]: profile_card("Age Group", "Consumer by age", data["age"], 48)
     with cols[2]: profile_card("Generation", "Generational split", data["generation"], 72)
+    st.markdown('<div class="kpi-row-gap"></div>', unsafe_allow_html=True)
     cols = st.columns(3, gap="large")
     with cols[0]: profile_card("Occupation", "By profession", data["occupation"], 88)
     with cols[1]: profile_card("Income Bracket", "Income segments", data["income"], 100)
