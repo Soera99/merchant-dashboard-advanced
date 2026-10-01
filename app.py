@@ -13,6 +13,23 @@ import streamlit as st
 st.set_page_config(page_title="Klikko Merchant Intelligence", page_icon="K", layout="wide", initial_sidebar_state="collapsed")
 
 
+# Height (px) of every line / bar chart card. Change this one number to resize all charts.
+CHART_HEIGHT = 220
+# Space (px) between the top edge of a chart box and its title.
+CHART_TITLE_PAD = 25
+# A text card that sits in the same row as a chart is never shorter than the chart box (chart height + 2px border).
+CARD_HEIGHT = CHART_HEIGHT + 2
+# Minimum height (px) of the text cards that share a row with a chart. Each value is the height that row's
+# content needs, so nothing is cut off. A row is never shorter than CARD_HEIGHT. Increase a number if you add content.
+ROW_H = {
+    "voucher": max(CARD_HEIGHT, 262),      # Marketing: Voucher Status Distribution
+    "comparison": max(CARD_HEIGHT, 268),   # Marketing: Top/Bottom Campaign + Campaign Timeline
+    "behaviour": max(CARD_HEIGHT, 267),     # Consumer: Consumer Behaviour cards
+    "merchant": max(CARD_HEIGHT, 221),      # Consumer: Merchant Ranking card
+    "selling": max(CARD_HEIGHT, 177),       # Klikko-Hub: Machine Ranking + Revenue Snapshot
+}
+
+
 @dataclass(frozen=True)
 class KPI:
     label: str
@@ -128,7 +145,6 @@ def inject_css() -> None:
       .kpi-icon svg, .fc-icon svg { width:15px; height:15px; stroke:#5577d4; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
       .pill { color:#476cc8; background:#edf2ff; border-radius:99px; padding:.2rem .45rem; font-size:.66rem; font-weight:700; white-space:nowrap; }
       .mk-card { background:#fff; border:1px solid var(--line); border-radius:16px; box-shadow:0 5px 18px rgba(39,57,86,.03); padding:1rem 1.1rem; box-sizing:border-box; }
-      .mk-card.tall { height:317px; overflow:hidden; }
       .card-title { color:#182230; font-size:.86rem; font-weight:700; letter-spacing:-.01em; }
       .card-sub { color:#98a2b3; font-size:.68rem; margin-top:.12rem; }
       .fc-card { background:#fff; border:1px solid var(--line); border-radius:16px; box-shadow:0 5px 18px rgba(39,57,86,.03); padding:1rem; min-height:104px; }
@@ -151,12 +167,12 @@ def inject_css() -> None:
       .ad-table td:first-child { font-weight:600; color:#182230; }
       .ad-table tbody tr:nth-child(even) { background:#f9fafc; }
       .ad-table td.strong { font-weight:700; color:#182230; }
-      .status-row { margin:.85rem 0; }
+      .status-row { margin:.6rem 0; }
       .status-top { display:flex; justify-content:space-between; font-size:.74rem; color:#344054; margin-bottom:.32rem; }
       .status-top b { color:#182230; }
       .status-track { height:6px; background:#eef1f5; border-radius:99px; overflow:hidden; }
       .status-fill { height:100%; border-radius:99px; }
-      .cmp-group { color:#7d8999; font-size:.64rem; font-weight:700; letter-spacing:.09em; margin:.2rem 0 .55rem; }
+      .cmp-group { color:#7d8999; font-size:.64rem; font-weight:700; letter-spacing:.09em; margin:.15rem 0 .4rem; }
       .cmp-item { display:flex; align-items:baseline; gap:.55rem; font-size:.78rem; }
       .cmp-rank { color:#98a2b3; font-size:.68rem; }
       .cmp-name { font-weight:600; color:#182230; flex:1; }
@@ -205,7 +221,7 @@ def inject_css() -> None:
       .bl-track { height:5px; background:#eef1f5; border-radius:99px; overflow:hidden; }
       .bl-track i { display:block; height:100%; border-radius:99px; }
       .bl-v { text-align:right; color:#182230; font-weight:600; white-space:nowrap; }
-      .rk-row { display:grid; grid-template-columns:22px minmax(0,1fr) auto; gap:.4rem; align-items:center; margin:.55rem 0; }
+      .rk-row { display:grid; grid-template-columns:22px minmax(0,1fr) auto; gap:.4rem; align-items:center; margin:.4rem 0; }
       .rk-n { color:#98a2b3; font-size:.68rem; }
       .rk-name { font-size:.74rem; font-weight:600; color:#182230; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
       .rk-track { height:4px; background:#eef1f5; border-radius:99px; overflow:hidden; margin-top:.32rem; }
@@ -302,14 +318,14 @@ def render_simple_card(label: str, value: str, delta: str, comparison: str) -> N
       <div class="simple-comparison">{comparison}</div></div>""", unsafe_allow_html=True)
 
 
-def trend_chart(title: str, subtitle: str, x: list[str], y: list[float], color: str, kind: str = "line", height: int = 315, unit: str = "", ticks: list[str] | None = None) -> go.Figure:
+def trend_chart(title: str, subtitle: str, x: list[str], y: list[float], color: str, kind: str = "line", height: int = CHART_HEIGHT, unit: str = "", ticks: list[str] | None = None) -> go.Figure:
     fig = go.Figure()
     if kind == "bar":
         fig.add_bar(x=x, y=y, marker_color=color, marker_line_width=0, opacity=.9, hovertemplate="%{x}: %{y:,}" + unit + "<extra></extra>")
     else:
         rgb = tuple(int(color.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4))
         fig.add_scatter(x=x, y=y, mode="lines+markers", line=dict(color=color, width=2.2, shape="spline"), marker=dict(size=5, color=color, line=dict(color="white", width=1)), fill="tozeroy", fillcolor=f"rgba({rgb[0]},{rgb[1]},{rgb[2]},0.10)", hovertemplate="%{x}: %{y:,}" + unit + "<extra></extra>")
-    fig.update_layout(title=dict(text=f"<b>{title}</b><br><span style='font-size:11px;color:#98a2b3'>{subtitle}</span>", x=.045, y=.92), height=height, margin=dict(l=30, r=25, t=75, b=30), paper_bgcolor="white", plot_bgcolor="white", font=dict(family="DM Sans", color="#344054"), showlegend=False, dragmode=False, xaxis=dict(showgrid=False, zeroline=False, fixedrange=True, tickfont=dict(size=10, color="#98a2b3")), yaxis=dict(showgrid=True, gridcolor="#eef1f5", zeroline=False, fixedrange=True, showticklabels=False), hoverlabel=dict(bgcolor="white", font_color="#182230"), bargap=.42)
+    fig.update_layout(title=dict(text=f"<b>{title}</b><br><span style='font-size:11px;color:#98a2b3'>{subtitle}</span>", x=.045, xref="container", y=1, yref="container", yanchor="top", pad=dict(t=CHART_TITLE_PAD)), height=height, margin=dict(l=30, r=25, t=CHART_TITLE_PAD + 52, b=30), paper_bgcolor="white", plot_bgcolor="white", font=dict(family="DM Sans", color="#344054"), showlegend=False, dragmode=False, xaxis=dict(showgrid=False, zeroline=False, fixedrange=True, tickfont=dict(size=10, color="#98a2b3")), yaxis=dict(showgrid=True, gridcolor="#eef1f5", zeroline=False, fixedrange=True, showticklabels=False), hoverlabel=dict(bgcolor="white", font_color="#182230"), bargap=.42)
     if ticks:
         fig.update_xaxes(tickmode="array", tickvals=ticks, ticktext=ticks)
     return fig
@@ -550,12 +566,12 @@ def ad_table(rows: list[tuple[str, ...]]) -> None:
 def status_card(items: list[tuple[str, int, str]]) -> None:
     issued = items[0][1]
     rows = "".join(f'<div class="status-row"><div class="status-top"><span>{escape(n)}</span><b>{compact(v)}</b></div><div class="status-track"><div class="status-fill" style="width:{v / issued * 100:.1f}%;background:{c}"></div></div></div>' for n, v, c in items)
-    st.markdown(f'<div class="mk-card tall"><div class="card-title">Voucher Status Distribution</div><div class="card-sub">Current snapshot</div><div style="margin-top:.6rem">{rows}</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="mk-card" style="min-height:{ROW_H["voucher"]}px"><div class="card-title">Voucher Status Distribution</div><div class="card-sub">Current snapshot</div><div style="margin-top:.6rem">{rows}</div></div>', unsafe_allow_html=True)
 
 
 def compare_card(top: tuple, bottom: tuple) -> None:
     st.markdown(
-        f'<div class="mk-card tall"><div class="cmp-group">TOP CAMPAIGN</div>'
+        f'<div class="mk-card" style="min-height:{ROW_H["comparison"]}px"><div class="cmp-group">TOP CAMPAIGN</div>'
         f'<div class="cmp-item"><span class="cmp-rank">#1</span><span class="cmp-name">{escape(top[0])}</span><span class="cmp-val">{top[1]}</span></div>'
         f'<div class="cmp-track"><i style="width:{top[2]}%"></i></div>'
         f'<div class="cmp-group">BOTTOM CAMPAIGN</div>'
@@ -567,7 +583,7 @@ def compare_card(top: tuple, bottom: tuple) -> None:
 
 def timeline_card(items: list[tuple[str, str, str]]) -> None:
     rows = "".join(f'<div class="tl-item"><div class="tl-dot" style="background:{c}"></div><div><div class="tl-name">{escape(n)}</div><div class="tl-date">{d}</div></div></div>' for n, d, c in items)
-    st.markdown(f'<div class="mk-card tall"><div class="card-title">Campaign Timeline</div><div class="card-sub">Execution plan overview</div><div style="margin-top:.7rem">{rows}</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="mk-card" style="min-height:{ROW_H["comparison"]}px"><div class="card-title">Campaign Timeline</div><div class="card-sub">Execution plan overview</div><div style="margin-top:.7rem">{rows}</div></div>', unsafe_allow_html=True)
 
 
 def marketing_overview(data: dict, months: list[str]) -> None:
@@ -598,7 +614,7 @@ def marketing_overview(data: dict, months: list[str]) -> None:
     with a: compare_card(data["top"], data["bottom"])
     with b: timeline_card(data["timeline"])
     with c:
-        st.plotly_chart(trend_chart("Campaign Trend", "ROI vs Trend", months, data["roi"], "#5577d4", "bar", height=315, unit="×"), width="stretch", config={"displayModeBar": False, "scrollZoom": False, "doubleClick": False})
+        st.plotly_chart(trend_chart("Campaign Trend", "ROI vs Trend", months, data["roi"], "#5577d4", "bar", unit="×"), width="stretch", config={"displayModeBar": False, "scrollZoom": False, "doubleClick": False})
 
     section("Campaign Forecast — Next 30 Days")
     cols = st.columns(4, gap="large")
@@ -614,7 +630,7 @@ BAR = "#4a63c9"
 
 # ---------------------------------------------------------------- shared helpers
 def mk(inner: str, h: int | None = None) -> None:
-    style = f' style="height:{h}px;overflow:hidden"' if h else ""
+    style = f' style="min-height:{h}px"' if h else ""
     st.markdown(f'<div class="mk-card"{style}>{inner}</div>', unsafe_allow_html=True)
 
 
@@ -747,16 +763,16 @@ def consumer_overview(data: dict, months: list[str]) -> None:
 
     section("Consumer Behaviour")
     a, b, c = st.columns(3, gap="large")
-    with a: mk(kicker("FAVORITE PRODUCT") + rank_rows(data["fav_product"]) + kicker("FAVORITE MERCHANT") + rank_rows(data["fav_merchant"]), 317)
+    with a: mk(kicker("FAVORITE PRODUCT") + rank_rows(data["fav_product"]) + kicker("FAVORITE MERCHANT") + rank_rows(data["fav_merchant"]), ROW_H["behaviour"])
     with b: chart(trend_chart("Purchase Frequency", "Last 12 months", months, data["frequency"], BLUE, ticks=TICKS))
-    with c: mk(kicker("FAVORITE CATEGORY") + rank_rows(data["fav_category"]) + kicker("PREFERRED PURCHASE TIME") + bar_rows([(label, value, f"{value}%", BAR) for label, value in data["purchase_time"]], 92), 317)
+    with c: mk(kicker("FAVORITE CATEGORY") + rank_rows(data["fav_category"]) + kicker("PREFERRED PURCHASE TIME") + bar_rows([(label, value, f"{value}%", BAR) for label, value in data["purchase_time"]], 92), ROW_H["behaviour"])
 
     section("Merchant Performance")
     left, right = st.columns([2, 3], gap="large")
     with left:
-        mk(kicker("MERCHANT RANKING") + rank_rows([(n, v, 0, d) for n, v, d in data["merchants"]], bars=False) + kicker("AVERAGE BASKET VALUE") + '<div class="big-num">Rp 48K</div><div class="delta-blue">+4.2% vs last period</div>', 317)
+        mk(kicker("MERCHANT RANKING") + rank_rows([(n, v, 0, d) for n, v, d in data["merchants"]], bars=False) + kicker("AVERAGE BASKET VALUE") + '<div class="big-num">Rp 48K</div><div class="delta-blue">+4.2% vs last period</div>', ROW_H["merchant"])
     with right:
-        chart(trend_chart("Merchant Trend", "Performance over time", months, data["merchant_trend"], PURPLE, "bar", ticks=TICKS))
+        chart(trend_chart("Merchant Trend", "Performance over time", months, data["merchant_trend"], BLUE, "bar", ticks=TICKS))
 
     section("Consumer Journey")
     funnel_card(data["journey"])
@@ -834,7 +850,7 @@ def product_overview(data: dict, months: list[str]) -> None:
     section("Performance Trends")
     left, right = st.columns(2, gap="large")
     with left: chart(trend_chart("Revenue Trend", "Last 12 months", months, data["revenue_trend"], BLUE, ticks=TICKS))
-    with right: chart(trend_chart("Product Sales Trend", "Last 12 months", months, data["sales_trend"], PURPLE, "bar", ticks=TICKS))
+    with right: chart(trend_chart("Product Sales Trend", "Last 12 months", months, data["sales_trend"], BLUE, "bar", ticks=TICKS))
 
     section("Forecast — Next 30 Days")
     forecast_row(data["forecast"])
@@ -876,9 +892,9 @@ def operations_overview(data: dict, months: list[str]) -> None:
 
     section("Selling Performance")
     a, b, c = st.columns(3, gap="large")
-    with a: mk(head("Machine Ranking", "Top 3 by revenue") + f'<div style="margin-top:.6rem">{rank_rows(data["ranking"])}</div>', 317)
+    with a: mk(head("Machine Ranking", "Top 3 by revenue") + f'<div style="margin-top:.6rem">{rank_rows(data["ranking"])}</div>', ROW_H["selling"])
     with b: chart(trend_chart("Sales Trend", "Last 12 months", months, data["sales_trend"], BLUE, ticks=TICKS))
-    with c: mk(kicker("REVENUE SNAPSHOT") + stat_rows(data["snapshot"]), 317)
+    with c: mk(kicker("REVENUE SNAPSHOT") + stat_rows(data["snapshot"]), ROW_H["selling"])
 
     section("Sampling Performance")
     cols = st.columns(5, gap="medium")
