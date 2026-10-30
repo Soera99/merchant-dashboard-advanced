@@ -4,3 +4,12 @@ __pycache__/
 .streamlit/secrets.toml
 workbook_inspection/
 node_modules/
+
+# Local credentials and deployment secrets
+.env
+.env.*
+!.env.example
+.env.cloudrun.yaml
+.env.cloudrun.yml
+gha-creds-*.json
+service-account*.json
